@@ -33,7 +33,6 @@ shopt -s histappend
 # update the values of LINES and COLUMNS.
 shopt -s checkwinsize
 
-export LANG='en_US'
 export EDITOR=vim
 
 # make less more friendly for non-text input files, see lesspipe(1)
@@ -48,6 +47,12 @@ fi
 case "$TERM" in
     xterm-color) color_prompt=yes;;
 esac
+
+# vim and gnome-terminal have support for 256 colours in fedora 8 at least
+# Note debian/ubuntu users need to install the ncurses-term package for this
+# Note this should be set in ~/.profile for Fedora startup scripts to
+# setup LS_COLORS correctly.
+export TERM=xterm-256color
 
 # uncomment for a colored prompt, if the terminal has the capability; turned
 # off by default to not distract the user: the focus in a terminal window
@@ -82,7 +87,7 @@ xterm*|rxvt*)
 esac
 
 #dynamic konsole terminal tabnames
-export PS1=$PS1"\[\e]30;\h:\W\a\e[28;0t\]"
+#export PS1=$PS1"\[\e]30;\h:\W\a\e[28;0t\]"
 
 
 # Alias definitions.
@@ -130,6 +135,32 @@ alias sb='sudo bash'
 alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../../..'
+alias md='mkdir'
+alias rd='rm -r'
+alias lcd-off='xset dpms force off'
+#alias ssh='ssh -c arcfour,blowfish-cbc'
+alias df='df -h'
+alias uo='sudo apt-get update && echo -e "\n############################################ \n## update finished \n############################################\n"  && sudo apt-get upgrade && echo -e "\n############################################ \n## upgrade finished \n############################################\n"  && sudo apt-get dist-upgrade'
+alias passgen='cat /dev/urandom|tr -dc "a-zA-Z0-9-_\$\?"|fold -w 9|head'
+alias dstat='dstat -Dsda,sdb'
+alias jdefault="java -server -XX:+UnlockDiagnosticVMOptions -XX:+PrintFlagsFinal -version"
+alias renamehtm="rename 's/\.htm$//' *.htm"
+
+
+alias vi='vim'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias lt='ls -ltrh'
+alias ll='ls -lh'
+alias la='ls -alh'
+alias l='ls -CFlh'
+#alias cp='cp -g'
+alias sb='sudo bash'
+alias ai='sudo apt-get install '
+#alias ai='sudo yum -y install '
+alias ys='sudo apt-cache search '
+#alias ys='sudo yum -C search '
 alias md='mkdir'
 alias rd='rm -r'
 alias lcd-off='xset dpms force off'
@@ -249,4 +280,63 @@ taca () {
 function vho()
 {
   vi /etc/apache$1/vhosts.inc
+}
+
+
+## archives
+function ac() { # compress a file or folder
+  case "$1" in
+    tar.bz2|.tar.bz2) tar cvjf "${2%%/}.tar.bz2" "${2%%/}/" ;;
+    tbz2|.tbz2) tar cvjf "${2%%/}.tbz2" "${2%%/}/" ;;
+    tbz|.tbz) tar cvjf "${2%%/}.tbz" "${2%%/}/" ;;
+    tar.gz|.tar.gz) tar cvzf "${2%%/}.tar.gz" "${2%%/}/" ;;
+    tar.Z|.tar.Z) tar Zcvf "${2%%/}.tar.Z" "${2%%/}/" ;;
+    tgz|.tgz) tar cvjf "${2%%/}.tgz" "${2%%/}/" ;;
+    tar|.tar) tar cvf "${2%%/}.tar" "${2%%/}/" ;;
+    rar|.rar) rar a "${2%%/}.rar" "${2%%/}/" ;;
+    zip|.zip) zip -r9 "${2}.zip" "$2" ;;
+    7z|.7z) 7z a "${2}.7z" "$2" ;;
+    lzo|.lzo) lzop -v "$2" ;;
+    gz|.gz) gzip -v "$2" ;;
+    bz2|.bz2) bzip2 -v "$2" ;;
+    xz|.xz) xz -v "$2" ;;
+    lzma|.lzma) lzma -v "$2" ;;
+   *) echo "Error, please go away.";;
+ esac
+}
+function ad() { # decompress
+  for i; do
+if [[ -f $i ]]; then
+local file_type="$(file -bizL $i)"
+case $file_type in
+*application/x-tar*|*application/zip*|*application/x-zip*|*application/x-cpio*) bsdtar -xvf $i;;
+*application/x-gzip*) gunzip -d -f $i;;
+*application/x-bzip*) bunzip2 -f $i;;
+*application/x-rar*) 7z x $i;;
+*application/octet-stream*)
+local file_type=$(file -bzL $i)
+case $file_type in
+7-zip*) 7z x $i;;
+*) echo "Unhandled filetype for '$i'\n$file_type";;
+esac;;
+*) echo "Unhandled filetype for '$i'\n$file_type";;
+esac
+else
+echo "'$i' is not a valid file"
+      fi
+done
+}
+function al() { # list content of archive but don't unpack
+  case "$1" in
+    *.tar.bz2|*.tbz2|*.tbz) tar -jtf "$1" ;;
+    *.tar.gz|*.tar.Z) tar -ztf "$1" ;;
+    *.tar|*.tgz) tar -tf "$1" ;;
+    *.gz) gzip -l "$1" ;;
+    *.rar) rar vb "$1" ;;
+    *.zip) unzip -l "$1" ;;
+    *.7z) 7z l "$1" ;;
+    *.lzo) lzop -l "$1" ;;
+    *.xz|*.txz|*.lzma|*.tlz) xz -l "$1" ;;
+    *) echo "Error, please go away.";;
+  esac
 }
