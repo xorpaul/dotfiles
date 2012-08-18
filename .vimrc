@@ -43,7 +43,7 @@ set hlsearch " highlight search
 set incsearch " incremental search, search as you type
 set ignorecase " Ignore case when searching
 set smartcase " Ignore case when searching lowercase
-set backup " xemacs like file backup
+"set backup " xemacs like file backup
 
 " Key mappings *********************************
 filetype plugin on
