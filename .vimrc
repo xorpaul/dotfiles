@@ -1,29 +1,52 @@
 " .vimrc Andreas Paul@pp
+execute pathogen#infect()
+
 syntax on
 " Python ***********************************
 "set autoindent
 "set tags+=$HOME/.vim/tags/python.ctags
+set tabstop=2
+set softtabstop=2
 set smarttab
 set expandtab
 set smartindent
 set shiftwidth=2
 set showmatch  " Show matching brackets.
-"set gtl=%t gtt=%F
+set gtl=%t gtt=%F
 " 256 colors *******************************
 
 " Sessions *********************************
-" Sets what is saved when you save a session
+" Tell vim to remember certain things when we exit
+"  '10  :  marks will be remembered for up to 10 previously edited files
+"  "100 :  will save up to 100 lines for each register
+"  :20  :  up to 20 lines of command-line history will be remembered
+"  %    :  saves and restores the buffer list
+"  n... :  where to save the viminfo files
+set viminfo='10,\"100,:20,%,n~/.viminfo
+" Afterwards, add the main function that restores the cursor position and its autocmd so that it gets triggered 
+function! ResCur()
+  if line("'\"") <= line("$")
+    normal! g`"
+    return 1
+  endif
+endfunction
 
-"au BufRead,BufNewFile *py,*pyw,*.c,*.h set tabstop=4
-"au BufRead,BufNewFile *.py,*.pyw set expandtab
-"au BufRead,BufNewFile *.c,*.h set noexpandtab
-"au BufRead,BufNewFile Makefile* set noexpandtab
-"au BufRead,BufNewFile *.py,*.pyw match BadWhitespace /^\t\+/
-"au BufRead,BufNewFile *.py,*.pyw,*.c,*.h match BadWhitespace /\s\+$/
-"au BufRead,BufNewFile *.py,*.pyw,*.c,*.h set textwidth=79
-"au BufNewFile *.py,*.pyw,*.c,*.h set fileformat=unix
-"autocmd FileType python set omnifunc=pythoncomplete#Complete
-"highlight BadWhitespace ctermbg=red guibg=red
+augroup resCur
+  autocmd!
+  autocmd BufWinEnter * call ResCur()
+augroup END
+
+" Python stuff ******************************
+au BufRead,BufNewFile *py,*pyw,*.c,*.h set tabstop=2
+au BufRead,BufNewFile *.py,*.pyw set expandtab
+au BufRead,BufNewFile *.c,*.h set noexpandtab
+au BufRead,BufNewFile Makefile* set noexpandtab
+au BufRead,BufNewFile *.py,*.pyw match BadWhitespace /^\t\+/
+au BufRead,BufNewFile *.py,*.pyw,*.c,*.h match BadWhitespace /\s\+$/
+au BufRead,BufNewFile *.py,*.pyw,*.c,*.h set textwidth=79
+au BufNewFile *.py,*.pyw,*.c,*.h set fileformat=unix
+autocmd FileType python set omnifunc=pythoncomplete#Complete
+highlight BadWhitespace ctermbg=red guibg=red
 
 " Auto Folding for python *******************
 "au BufRead,BufNewFile *.py,*.pyw let b:folded = 0
@@ -74,6 +97,7 @@ nnoremap <A-0> 10g
 map <silent><A-Right> :tabnext<CR>
 map <silent><A-Left> :tabprevious<CR> 
 nnoremap <silent> <S-F> :call ToggleFold()<CR>
+nnoremap <silent> <F1> :GoBuild<CR>:GoRun<CR>
 nnoremap <silent> <F8> :TlistToggle<CR>
 nnoremap <silent> <F9> :NERDTreeToggle<CR>
 
@@ -100,7 +124,8 @@ nnoremap ; : " use ; instead of :
 cmap w!! %!sudo tee > /dev/null % 
 
 " Functions ************************************
-iabbrev xxsig <Esc>:r ![ -n "PAULA" ] && echo "PAULA `date '+\%Y-\%m-\%d \%H:\%M'`" \|\| echo "PAULA `date '+\%Y-\%m-\%d \%H:\%M'`"<CR>I<BS><Esc>A
+iabbrev xxsig <Esc>:r ![ -n "ANDPAUL" ] && echo "Andreas (ANDPAUL) Paul `date '+\%Y-\%m-\%d \%H:\%M'`" \|\| echo "Andreas (ANDPAUL) Paul `date '+\%Y-\%m-\%d \%H:\%M'`"<CR>I<BS><Esc>A
+iabbrev xxhead <Esc>:r ![ -n "ANDPAUL" ] && echo -e "\# -----------------------\n\# Author: Andreas Paul (ANDPAUL) <andreas.paul@1und1.de>\n\# Date: `date '+\%Y-\%m-\%d \%H:\%M'`\n\# Version: 0.1\n\# -----------------------\n" \|\| echo "ANDPAUL `date '+\%Y-\%m-\%d \%H:\%M'`"<CR>I<BS><Esc>A
 "
 " --- Folding Options
 
@@ -117,3 +142,74 @@ set statusline=%<%f\ %h%w%m%r%y%=L:%l/%L\ (%p%%)\ C:%c%V
 
 " open/close folds with tab
 map <TAB> za
+
+" snipmate settings
+let g:snips_author = 'Andreas Paul'
+let g:snips_email = 'andreas.paul@1und1.de'
+
+if has('gui_running')
+  " Auto-open NERDTree in EVERY tab
+  autocmd VimEnter * NERDTree
+  autocmd BufWinEnter * NERDTreeMirror
+  "python from powerline.vim import setup as powerline_setup
+  "python powerline_setup()
+  "python del powerline_setup
+endif
+
+" http://stackoverflow.com/questions/953398/how-to-execute-file-im-editing-in-vim
+function! Setup_ExecNDisplay()
+  execute "w"
+  execute "silent !chmod +x %:p"
+  let n=expand('%:t')
+  execute "silent !%:p 2>&1 | tee ~/.vim/output_".n
+  " I prefer vsplit
+  "execute "split ~/.vim/output_".n
+  execute "vsplit ~/.vim/output_".n
+  execute "redraw!"
+  set autoread
+endfunction
+
+function! ExecNDisplay()
+  execute "w"
+  let n=expand('%:t')
+  "execute "silent !echo 'executed file'".@%." at: !date"
+  execute "silent !date | tee ~/.vim/output_".n
+  execute "silent !%:p 2>&1 | tee -a ~/.vim/output_".n
+  " I use set autoread
+  "execute "1 . 'wincmd e'"
+endfunction
+
+function! ExecGoNDisplay()
+  execute "w"
+  let f=expand('%')
+  let n=expand('%:t')
+  let td=expand('%:h')
+  let $GOPATH='/home/andpaul/dev/go'
+  execute "silent !echo 'executed file'".@%." at: !date | tee ~/.vim/output_".n
+  execute "silent !date | tee ~/.vim/output_".n
+  execute "silent !cd ".td." && time /usr/bin/go build %:p 2>&1 | tee -a ~/.vim/output_".n." && cd - && %:r 2>&1 | tee -a ~/.vim/output_".n
+  "execute "silent !time /usr/bin/go run % 2>&1 | tee -a ~/.vim/output_".n
+  "execute "silent !%:r 2>&1 | tee -a ~/.vim/output_".n
+  " I use set autoread
+  "execute "1 . 'wincmd e'"
+endfunction
+
+function! ExecGitPuppet4Sync()
+  execute "w"
+  execute "!git add -A ; git ci -am 'add stuff' ;git push ; echo onlyeu update itodsi_cmdbuild_qa | nc puppet-hosting-sync.server.lan 18140"
+endfunction
+
+:nmap <F9> :call Setup_ExecNDisplay()<CR>
+:nmap <F2> :call ExecNDisplay()<CR>
+:nmap <F3> :call ExecGoNDisplay()<CR>
+:nmap <F4> :call ExecGitPuppet4Sync()<CR>
+
+" Some Linux distributions set filetype in /etc/vimrc.
+" Clear filetype flags before changing runtimepath to force Vim to reload them.
+if exists("g:did_load_filetypes")
+  filetype off
+  filetype plugin indent off
+endif
+set runtimepath+=/usr/local/go/misc/vim
+filetype plugin indent on
+syntax on

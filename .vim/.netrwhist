@@ -1,0 +1,5 @@
+let g:netrw_dirhistmax  =10
+let g:netrw_dirhist_cnt =3
+let g:netrw_dirhist_1='/etc/puppet/wspgui.enbw.net/htdocs'
+let g:netrw_dirhist_2='/etc/puppet/environments/entwicklung/modules/wsp/manifests'
+let g:netrw_dirhist_3='/etc/puppet/environments/entwicklung/modules/wsp'

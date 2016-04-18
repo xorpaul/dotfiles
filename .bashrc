@@ -15,10 +15,10 @@
 # from http://administratosphere.wordpress.com/2011/05/20/logging-every-shell-command/
 export HISTCONTROL=
 export HISTFILE=$HOME/.bash_history
-export HISTFILESIZE=60000
+export HISTFILESIZE=90000
 export HISTIGNORE=
-export HISTSIZE=20000
-export HISTTIMEFORMAT="%a %b %Y %T %z "
+export HISTSIZE=90000
+export HISTTIMEFORMAT="%F %T %z "
 
 shopt -s cmdhist
 
@@ -34,6 +34,12 @@ shopt -s histappend
 shopt -s checkwinsize
 
 export EDITOR=vim
+
+# http://b.sricola.com/post/16174981053/bash-autocomplete-for-ssh
+#complete -W "$(echo $(grep '^ssh ' ~/.bash_history | sort -u | sed 's/^ssh //'))" ssh
+# http://unix.stackexchange.com/questions/136351/autocomplete-server-names-for-ssh-and-scp
+complete -W "$(echo `cat ~/.ssh/known_hosts | cut -f 1 -d ' ' | sed -e s/,.*//g | uniq | grep -v "\["`;)" ssh
+#complete -W "$(echo `cat ~/.ssh/known_hosts | cut -f 1 -d ' ' | sed -e s/,.*//g | uniq | grep -v "\["`;)" scp
 
 # make less more friendly for non-text input files, see lesspipe(1)
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
@@ -71,7 +77,13 @@ if [ -n "$force_color_prompt" ]; then
 fi
 
 if [ "$color_prompt" = yes ]; then
-    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;36m\]\w\[\033[00m\]\$ '
+  if [ "$USER" = root ]; then
+    #PS1='${debian_chroot:+($debian_chroot)}\[\033[01;31m\]\u@\h\[\033[00m\]:\[\033[01;36m\]\w\[\033[00m\]\[$MAGENTA\]\[$WHITE]\$ '
+    PS1="${debian_chroot:+($debian_chroot)}\[\033[01;31m\]\u@\h\[\033[00m\]:\[\033[01;36m\]\w\[\033[00m\]\$ "
+  else
+    PS1="${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;36m\]\w\[\033[00m\]\$(__git_ps1 '(%s)') \$ "
+    #PS1="\[$GREEN\]\t\[$RED\]-\[$BLUE\]\u\[$YELLOW\]\[$YELLOW\]\w\[\033[m\]\[$MAGENTA\]\$(__git_ps1)\[$WHITE\]\$ "
+  fi
 else
     PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
 fi
@@ -89,6 +101,41 @@ esac
 #dynamic konsole terminal tabnames
 #export PS1=$PS1"\[\e]30;\h:\W\a\e[28;0t\]"
 
+SSH_ENV="$HOME/.ssh/environment"
+
+function start_agent {
+     echo "Initialising new SSH agent..."
+     /usr/bin/ssh-agent | sed 's/^echo/#echo/' > "${SSH_ENV}"
+     echo succeeded
+     chmod 600 "${SSH_ENV}"
+     . "${SSH_ENV}" > /dev/null
+     /usr/bin/ssh-add ${HOME}/.ssh/${USER};
+}
+
+# Source SSH settings, if applicable
+
+if [ -f "${SSH_ENV}" ]; then
+     . "${SSH_ENV}" > /dev/null
+     #ps ${SSH_AGENT_PID} doesn't work under cywgin
+     ps -ef | grep ${SSH_AGENT_PID} | grep ssh-agent$ > /dev/null || {
+         start_agent;
+     }
+else
+     start_agent;
+fi
+
+#agent="/home/andpaul/.gnupg/gpg-agent-info-andpaul"
+# test if agent file exists
+# test if running agent Pid is equal to pid in agent file
+# otherwise killall agents and start a new one
+#
+#if [ ! -f "$agent" ] || [ -f "$agent" -a  $(pgrep gpg-agent | head -1) -ne $(grep "SSH_AGENT_PID" $agent | cut -d"=" -f2)  ] || [ "$1" = "-f" ];then
+#  killall gpg-agent
+#  /usr/bin/gpg-agent --quiet --enable-ssh-support --daemon --write-env-file $agent
+#  [ -f $agent ] && . $agent > /dev/null || echo "Error. $agent not available. something went wrong."
+#else
+#  . $agent > /dev/null
+#fi
 
 # Alias definitions.
 # You may want to put all your additions into a separate file like
@@ -113,7 +160,7 @@ fi
 
 # some more aliases
 alias top='top -c'
-alias sb='sudo bash'
+alias sb='sudo -E bash'
 alias nr='/etc/init.d/nagios checkconfig && sleep 5 && /etc/init.d/nagios reload'
 alias vi='vim'
 alias v='vi'
@@ -140,16 +187,20 @@ alias ai='sudo apt-get install '
 alias ys='sudo apt-cache search '
 #alias ys='sudo yum -C search '
 alias md='mkdir'
-alias rd='rm -r'
+alias rd='rm -rf'
 alias lcd-off='xset dpms force off'
 #alias ssh='ssh -c arcfour,blowfish-cbc'
 alias df='df -h'
 alias uo='sudo apt-get --yes update && echo -e "\n############################################ \n## update finished \n############################################\n"  && sudo apt-get --yes upgrade && echo -e "\n############################################ \n## upgrade finished \n############################################\n"  && sudo apt-get --yes dist-upgrade'
-alias passgen='cat /dev/urandom|tr -dc "a-zA-Z0-9-_\$\?"|fold -w 9|head'
+alias passgen='cat /dev/urandom|tr -dc "a-zA-Z0-9-_\$\?"|fold -w 64|head'
 alias dstat='dstat -Dsda,sdb'
 alias jdefault="java -server -XX:+UnlockDiagnosticVMOptions -XX:+PrintFlagsFinal -version"
 alias renamehtm="rename 's/\.htm$//' *.htm"
-
+alias gs='git status'
+alias gi='git commit'
+alias gp='git push'
+alias gl='git pull'
+alias ge='if test -e /etc/puppetlabs/puppet/puppet.conf; then grep envir /etc/puppetlabs/puppet/puppet.conf ; else grep envir /etc/puppet/puppet.conf; fi'
 
 # enable programmable completion features (you don't need to enable
 # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
@@ -169,7 +220,20 @@ fi
 #rename 's/\.htm$//' *.htm
 #find . -size +2M -print0 | xargs -0 -i mv '{}' /68/
 
+# remove unnecessary kernel
+# dpkg -l 'linux-*' | sed '/^ii/!d;/'"$(uname -r | sed "s/\(.*\)-\([^0-9]\+\)/\1/")"'/d;s/^[^ ]* [^ ]* \([^ ]*\).*/\1/;/[0-9]/!d' | xargs sudo apt-get -y purge
+
 #### FUNCTIONS ####
+function settitle() {
+    printf "\033k$1\033\\"
+}
+
+function ssh() {
+    settitle "$*"
+    command ssh "$@"
+    settitle "bash"
+}
+
 
 function swap()          
 { 
@@ -318,3 +382,8 @@ function al() { # list content of archive but don't unpack
     *) echo "Error, please go away.";;
   esac
 }
+
+# GO stuff
+export GOPATH=$HOME/dev/go
+export PATH=$PATH:$GOPATH/bin
+source ~/.git-prompt.sh
